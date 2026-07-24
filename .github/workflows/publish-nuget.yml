@@ -23,7 +23,7 @@ permissions:
 env:
   DOTNET_NOLOGO: true
   DOTNET_CLI_TELEMETRY_OPTOUT: true
-  PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/artifacts/packages
+  PACKAGE_OUTPUT_DIR: artifacts/packages
 
 jobs:
   pack-and-publish:
@@ -67,10 +67,28 @@ jobs:
           "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
 
       - name: Push to GitHub Packages
-        run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIR }}\*.nupkg" --source github --api-key ${{ secrets.GITHUB_TOKEN }}
+        # Enumerate with Get-ChildItem and push each file by full path, rather
+        # than handing dotnet nuget push a wildcard: on windows-latest its own
+        # glob resolution doesn't reliably match PACKAGE_OUTPUT_DIR once GitHub
+        # Actions path substitution mixes / and \ separators.
+        run: |
+          $packages = Get-ChildItem -Path "${{ env.PACKAGE_OUTPUT_DIR }}" -Filter *.nupkg
+          if ($packages.Count -eq 0) {
+            Write-Error "No .nupkg files found in ${{ env.PACKAGE_OUTPUT_DIR }}"
+            exit 1
+          }
+          foreach ($pkg in $packages) {
+            dotnet nuget push $pkg.FullName --source github --api-key ${{ secrets.GITHUB_TOKEN }}
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
 
       # - name: Push to NuGet.org
-      #   run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIR }}\*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      #   run: |
+      #     $packages = Get-ChildItem -Path "${{ env.PACKAGE_OUTPUT_DIR }}" -Filter *.nupkg
+      #     foreach ($pkg in $packages) {
+      #       dotnet nuget push $pkg.FullName --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      #       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      #     }
 
       - name: Upload packages as build artifact
         uses: actions/upload-artifact@v4
