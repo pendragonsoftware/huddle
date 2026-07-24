@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Huddle.Sample.PeerToPeer.MainPage"
+             xmlns:models="clr-namespace:Huddle.Sample.PeerToPeer;assembly=Huddle.Sample.PeerToPeer"
+             x:DataType="models:MainPage"
+             BackgroundColor="{StaticResource HuddleSurface}">
+
+    <ScrollView BackgroundColor="{StaticResource HuddleSurface}">
+        <VerticalStackLayout
+            Padding="24,0"
+            Spacing="12">
+
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnSpacing="14"
+                  Padding="0,8,0,4">
+                <Label Text="Peer To Peer"
+                       Style="{StaticResource Headline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+                <Label Grid.Row="1"
+                       Text="Discover nearby peers by display name"
+                       Style="{StaticResource SubHeadline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,2*" ColumnSpacing="8"
+                  BackgroundColor="{StaticResource HuddlePanel}"
+                  Padding="14">
+                <Label Grid.Column="0"
+                   Text="Display Name:"
+                   Style="{StaticResource SubHeadline}"
+                   HorizontalOptions="Start"
+                   SemanticProperties.HeadingLevel="Level1" />
+                <Label Grid.Column="1" 
+                        x:Name="labelDisplayName"
+                        Text=""
+                        Style="{StaticResource Headline}"
+                        HorizontalOptions="End"
+                        SemanticProperties.HeadingLevel="Level1" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                     x:Name="buttonStart"
+                     Text="Start" 
+                     SemanticProperties.Hint="Start server"
+                     Clicked="OnStartClicked"
+                     HorizontalOptions="Fill" />
+
+                <Button Grid.Column="0"
+                     x:Name="buttonStop" IsVisible="false"
+                     Text="Stop" 
+                     BackgroundColor="{StaticResource PrimaryDark}"
+                     SemanticProperties.Hint="Stop server"
+                     Clicked="OnStopClicked"
+                     HorizontalOptions="Fill" />
+            </Grid>
+            
+            <Grid ColumnDefinitions="2*,*,*" ColumnSpacing="8">
+                <Entry Grid.Column="0" x:Name="entryText" Text="Hello world!"></Entry>
+
+                <Button Grid.Column="1"
+                      Text="Send Selected" 
+                      Clicked="OnSendClicked"
+                      HorizontalOptions="Fill" />
+                
+                <Button Grid.Column="2"
+                      Text="Send All" 
+                      BackgroundColor="{StaticResource HuddleOrange}"
+                      Clicked="OnSendAllClicked"
+                      HorizontalOptions="Fill" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*, 2*">
+                <CollectionView x:Name="collectionView" SelectionMode="Single" BackgroundColor="{StaticResource HuddlePanel}">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate x:DataType="models:Peer">
+                            <Label Text="{Binding DisplayName}" TextColor="{StaticResource HuddleText}" Padding="12" />
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+
+                <Border Grid.Column="1" BackgroundColor="{StaticResource HuddlePanel}">
+                    <ScrollView VerticalOptions="Fill" MinimumHeightRequest="300"  MaximumHeightRequest="500">
+                        <VerticalStackLayout x:Name="containerMessages" VerticalOptions="Fill">
+
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </Border>
+            </Grid>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

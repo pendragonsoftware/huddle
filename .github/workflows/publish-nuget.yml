@@ -1,0 +1,79 @@
+name: Publish NuGet Packages
+
+# Builds, tests, and packs Huddle.Server, Huddle.Client, and Huddle.PeerToPeer
+# (Huddle.Core / Huddle.PlatformCore are bundled inside those three, not
+# published standalone), then pushes the resulting packages to GitHub Packages.
+#
+# The version comes from <VersionPrefix> in src/Directory.Build.props. Bump it
+# before merging to main — pushing a version that already exists on the feed
+# fails the workflow on purpose, as a reminder to bump.
+#
+# To also publish to nuget.org: add a NUGET_API_KEY repo secret and uncomment
+# the "Push to NuGet.org" step below.
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  PACKAGE_OUTPUT_DIR: ${{ github.workspace }}/artifacts/packages
+
+jobs:
+  pack-and-publish:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore workloads
+        run: dotnet workload restore Huddle.slnx
+
+      - name: Restore
+        run: dotnet restore Huddle.slnx
+
+      - name: Build
+        run: dotnet build Huddle.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test tests/Huddle.Core.Tests/Huddle.Core.Tests.csproj -c Release --no-build
+
+      - name: Pack
+        # No --no-build: Huddle.Core is IsPackable=false, and combining that
+        # with IncludeProjectReferenceOutputsInPackage on the packable
+        # projects trips NETSDK1085 under --no-build. Build is incremental
+        # here anyway, so this is a fast no-op after the Build step above.
+        run: dotnet pack Huddle.slnx -c Release -o "${{ env.PACKAGE_OUTPUT_DIR }}"
+
+      - name: Add GitHub Packages source
+        run: >
+          dotnet nuget add source
+          --username ${{ github.actor }}
+          --password ${{ secrets.GITHUB_TOKEN }}
+          --store-password-in-clear-text
+          --name github
+          "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json"
+
+      - name: Push to GitHub Packages
+        run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIR }}\*.nupkg" --source github --api-key ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Push to NuGet.org
+      #   run: dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIR }}\*.nupkg" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+
+      - name: Upload packages as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuget-packages
+          path: ${{ env.PACKAGE_OUTPUT_DIR }}/*.nupkg

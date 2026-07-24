@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../src/Huddle.Core/Huddle.Core.csproj" />
+  <Project Path="Huddle.Core.Tests/Huddle.Core.Tests.csproj" />
+</Solution>

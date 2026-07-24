@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Huddle.Sample.Client.MainPage"
+             xmlns:root="clr-namespace:Huddle.Sample.Client"
+             xmlns:models="clr-namespace:Huddle.Client;assembly=Huddle.Client"
+             x:DataType="root:ServersViewModel"
+             BackgroundColor="{StaticResource HuddleSurface}">
+
+    <ScrollView BackgroundColor="{StaticResource HuddleSurface}">
+        <VerticalStackLayout
+            Padding="24,0"
+            Spacing="12">
+
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnSpacing="14"
+                  Padding="0,8,0,4">
+                <Label Text="Client"
+                       Style="{StaticResource Headline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+                <Label Grid.Row="1"
+                       Text="Discover and message a nearby Huddle server"
+                       Style="{StaticResource SubHeadline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,2*" RowDefinitions="*,*"
+                  ColumnSpacing="8" RowSpacing="8"
+                  BackgroundColor="{StaticResource HuddlePanel}"
+                  Padding="14">
+                <Label Grid.Row="0" Grid.Column="0"
+                        Text="IP Address:"
+                        Style="{StaticResource SubHeadline}"
+                        HorizontalOptions="Start"
+                        SemanticProperties.HeadingLevel="Level1" />
+                <Label Grid.Row="0" Grid.Column="1"
+                        x:Name="labelIpAddress"
+                        Text=""
+                        Style="{StaticResource Headline}"
+                        HorizontalOptions="End"
+                        SemanticProperties.HeadingLevel="Level1" />
+
+                <Label Grid.Row="1" Grid.Column="0" 
+                       Text="Device ID:"
+                       Style="{StaticResource SubHeadline}"
+                       HorizontalOptions="Start"
+                       SemanticProperties.HeadingLevel="Level1" />
+                <Label Grid.Row="1" Grid.Column="1" 
+                        x:Name="labelDeviceId"
+                        Text=""
+                        Style="{StaticResource Headline}"
+                        HorizontalOptions="End"
+                        SemanticProperties.HeadingLevel="Level1" />
+            </Grid>
+
+          
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Button x:Name="buttonSearchForServer" Text="Search For Server" Grid.Column="0"
+                        Clicked="OnSearchClicked"
+                        HorizontalOptions="Fill" />
+                <Button x:Name="buttonSearchContinuouslyForServer" Text="Search For Server (Continuously)" Grid.Column="1"
+                        BackgroundColor="{StaticResource HuddleOrange}"
+                        Clicked="OnSearchContinuouslyClicked"
+                        HorizontalOptions="Fill" />
+                <Button x:Name="buttonStopSearchForServer" Text="Stop Searching For Server" Grid.Column="0"
+                        BackgroundColor="{StaticResource PrimaryDark}"
+                        Clicked="OnStopSearchClicked"
+                        HorizontalOptions="Fill" />
+            </Grid>
+
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Entry Grid.Column="0" x:Name="entryIpAddress"></Entry>
+
+                <Entry Grid.Column="1" x:Name="entryPort"></Entry>
+
+                <Button Grid.Column="2"
+                    Text="Update" BackgroundColor="{StaticResource HuddleAmber}" TextColor="{StaticResource HuddleText}"
+                    Clicked="OnUpdateIpAndPortClicked"
+                    HorizontalOptions="Fill" />
+            </Grid>
+
+            <CollectionView SelectionMode="Single" SelectionChanged="CollectionView_SelectionChanged" ItemsSource="{Binding Servers}"
+                            IsVisible="{Binding HasMultipleServers}"
+                            BackgroundColor="{StaticResource HuddlePanel}">
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:ServerInformation">
+                        <Label Text="{Binding IpAddress}" Padding="12" TextColor="{StaticResource HuddleText}" />
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <Grid ColumnDefinitions="*,*,*" RowDefinitions="*,*" ColumnSpacing="8" RowSpacing="8">
+                <Button Grid.Column="0" Grid.Row="0" BackgroundColor="{StaticResource Secondary}" TextColor="{StaticResource HuddleText}"
+                        Text="Check Status" 
+                        Clicked="OnCheckAvailableClicked"
+                        HorizontalOptions="Fill" />
+
+                <Entry Grid.Column="1" Grid.Row="0" Grid.ColumnSpan="2" x:Name="entryText" Text="Hello server"></Entry>
+
+                <Button Grid.Column="0" Grid.Row="1"
+                        Text="Send API"
+                        BackgroundColor="{StaticResource Primary}" TextColor="White"
+                        Clicked="OnSendApiClicked"
+                        HorizontalOptions="Fill" />
+                <Button Grid.Column="1" Grid.Row="1"
+                        Text="Send Queue"
+                        BackgroundColor="{StaticResource HuddleOrange}" TextColor="White"
+                        Clicked="OnSendQueueClicked"
+                        HorizontalOptions="Fill" />
+                <Button Grid.Column="2" Grid.Row="1"
+                        Text="Send Message" 
+                        BackgroundColor="{StaticResource HuddleAmber}" TextColor="{StaticResource HuddleText}"
+                        Clicked="OnSendMDNSClicked"
+                        HorizontalOptions="Fill" />
+            </Grid>
+
+           
+            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                <Entry Grid.Column="0" x:Name="entryLoadTest" Text="100"></Entry>
+                <Button Grid.Column="1"
+                     Text="Load Test" TextColor="{StaticResource HuddleText}" BackgroundColor="{StaticResource Secondary}"
+                     Clicked="OnLoadTestClicked"
+                     HorizontalOptions="Fill" />
+            </Grid>
+
+            <ScrollView VerticalOptions="Fill" MinimumHeightRequest="200" MaximumHeightRequest="300"
+                        BackgroundColor="{StaticResource HuddlePanel}">
+                <VerticalStackLayout x:Name="containerMessages" VerticalOptions="Fill">
+
+
+                </VerticalStackLayout>
+            </ScrollView>
+            
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

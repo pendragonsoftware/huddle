@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Shell
+    x:Class="Huddle.Sample.PeerToPeer.AppShell"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:local="clr-namespace:Huddle.Sample.PeerToPeer"
+    Shell.FlyoutBehavior="Disabled"
+    Shell.BackgroundColor="White"
+    Title="Huddle Sample (Peer To Peer)">
+
+    <Shell.TitleView>
+        <HorizontalStackLayout Padding="12,0" Spacing="6">
+            <Image Source="huddle_icon.png"
+                   HeightRequest="32"
+                   WidthRequest="32"
+                   Aspect="AspectFit" />
+            <Label Grid.Column="1"
+                   Text="Huddle"
+                   Style="{StaticResource Headline}"
+                   VerticalTextAlignment="Center" />
+        </HorizontalStackLayout>
+    </Shell.TitleView>
+
+    <Shell.ToolbarItems>
+        <ToolbarItem Text="Logs" Clicked="ToolbarItem_Clicked"></ToolbarItem>
+    </Shell.ToolbarItems>
+
+    <ShellContent
+        Title="Peer To Peer"
+        ContentTemplate="{DataTemplate local:MainPage}"
+        Route="MainPage" />
+
+</Shell>

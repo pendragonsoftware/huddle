@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="Huddle.Sample.Server.MainPage"
+             BackgroundColor="{StaticResource HuddleSurface}">
+
+    <ScrollView BackgroundColor="{StaticResource HuddleSurface}">
+        <VerticalStackLayout
+            Padding="24,0"
+            Spacing="12">
+
+            <Grid RowDefinitions="Auto,Auto"
+                  ColumnSpacing="14"
+                  Padding="0,8,0,4">
+                <Label Text="Server"
+                       Style="{StaticResource Headline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+                <Label Grid.Row="1"
+                       Text="Host a discoverable local service"
+                       Style="{StaticResource SubHeadline}"
+                       HorizontalOptions="Start"
+                       HorizontalTextAlignment="Start" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,2*" RowDefinitions="*,*"
+                  ColumnSpacing="8" RowSpacing="8"
+                  BackgroundColor="{StaticResource HuddlePanel}"
+                  Padding="14">
+                <Label Grid.Row="0" Grid.Column="0"
+                    Text="IP Address:"
+                    Style="{StaticResource SubHeadline}"
+                    HorizontalOptions="Start"
+                    SemanticProperties.HeadingLevel="Level1" />
+                <Label Grid.Row="0" Grid.Column="1"
+                    x:Name="labelIpAddress"
+                    Text=""
+                    Style="{StaticResource Headline}"
+                    HorizontalOptions="End"
+                    SemanticProperties.HeadingLevel="Level1" />
+
+                <Label Grid.Row="1" Grid.Column="0"
+                   Text="Device ID:"
+                   Style="{StaticResource SubHeadline}"
+                   HorizontalOptions="Start"
+                   SemanticProperties.HeadingLevel="Level1" />
+                <Label Grid.Row="1" Grid.Column="1" 
+                        x:Name="labelDeviceId"
+                        Text=""
+                        Style="{StaticResource Headline}"
+                        HorizontalOptions="End"
+                        SemanticProperties.HeadingLevel="Level1" />
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="8">
+                <Button Grid.Column="0"
+                     x:Name="buttonStart"
+                     Text="Start" 
+                     SemanticProperties.Hint="Start server"
+                     Clicked="OnStartClicked"
+                     HorizontalOptions="Fill" />
+
+                <Button Grid.Column="0"
+                     x:Name="buttonStop" IsVisible="false"
+                     Text="Stop" 
+                     BackgroundColor="{StaticResource PrimaryDark}"
+                     SemanticProperties.Hint="Stop server"
+                     Clicked="OnStopClicked"
+                     HorizontalOptions="Fill" />
+            </Grid>
+
+            <Grid ColumnDefinitions="2*,*" ColumnSpacing="8">
+                <Entry Grid.Column="0" x:Name="entryText" Text="Hello clients"></Entry>
+
+                <Button Grid.Column="1"
+                      Text="Send" 
+                      BackgroundColor="{StaticResource HuddleAmber}" TextColor="{StaticResource HuddleText}"
+                      Clicked="OnSendClicked"
+                      HorizontalOptions="Fill" />
+            </Grid>
+
+            <Border BackgroundColor="{StaticResource HuddlePanel}">
+                <ScrollView VerticalOptions="Fill" MinimumHeightRequest="300"  MaximumHeightRequest="500">
+                    <VerticalStackLayout x:Name="containerMessages" VerticalOptions="Fill">
+
+
+                    </VerticalStackLayout>
+                </ScrollView>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
+
+</ContentPage>

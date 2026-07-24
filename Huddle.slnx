@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Huddle.Client/Huddle.Client.csproj" />
+    <Project Path="src/Huddle.Core/Huddle.Core.csproj" />
+    <Project Path="src/Huddle.PeerToPeer/Huddle.PeerToPeer.csproj" />
+    <Project Path="src/Huddle.PlatformCore/Huddle.PlatformCore.csproj" />
+    <Project Path="src/Huddle.Server/Huddle.Server.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Huddle.Core.Tests/Huddle.Core.Tests.csproj" />
+  </Folder>
+</Solution>

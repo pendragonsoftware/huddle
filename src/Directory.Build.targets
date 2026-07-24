@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup Condition="'$(IncludeProjectReferenceOutputsInPackage)' == 'true'">
+    <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);AddProjectReferenceOutputsToPackage</TargetsForTfmSpecificBuildOutput>
+  </PropertyGroup>
+
+  <Target Name="AddProjectReferenceOutputsToPackage" DependsOnTargets="ResolveReferences" Condition="'$(IncludeProjectReferenceOutputsInPackage)' == 'true'">
+    <ItemGroup>
+      <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths)" Condition="'%(ReferenceCopyLocalPaths.ReferenceSourceTarget)' == 'ProjectReference' and ('%(ReferenceCopyLocalPaths.Extension)' == '.dll' or '%(ReferenceCopyLocalPaths.Extension)' == '.xml')" />
+    </ItemGroup>
+  </Target>
+</Project>
