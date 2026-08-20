@@ -10,6 +10,8 @@ namespace Huddle.Server.Services;
 
 internal partial class HttpListenerService(IServiceProvider serviceProvider, ILogger<HttpListenerService> logger) : INetworkListenerService, IDisposable
 {
+    private const string StickyPortPreferenceKey = "Huddle.Server.Http.StickyPort";
+
     private readonly List<Client> _clients = [];
     private readonly Dictionary<(string Path, string HttpMethod), Func<RequestContext, Task<ResponseInformation>>> _endpoints = [];
 
@@ -34,7 +36,11 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             logger.LogError("HttpListener not supported");
         }
 
-        var assignedPort = port > 0 ? port : GetFreePort();
+        // Auto-assigned ports are sticky: reusing the same port across launches keeps
+        // Windows URL ACL reservations and firewall rules valid, instead of accumulating
+        // one per launch.
+        var explicitPort = port > 0;
+        var assignedPort = explicitPort ? port : GetPersistedPort() ?? GetFreePort();
 
         if (!TryPreparePort(assignedPort))
         {
@@ -44,11 +50,42 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             TryPreparePort(assignedPort);
         }
 
+        if (!explicitPort)
+        {
+            PersistPort(assignedPort);
+        }
+
         _listener = new HttpListener();
         _listener.Prefixes.Clear();
         _listener.Prefixes.Add(GetPrefix(assignedPort));
 
         return assignedPort;
+    }
+
+    private int? GetPersistedPort()
+    {
+        try
+        {
+            var stored = Microsoft.Maui.Storage.Preferences.Default.Get(StickyPortPreferenceKey, 0);
+            return stored > 0 ? stored : null;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "HttpListenerService: Could not read the persisted port");
+            return null;
+        }
+    }
+
+    private void PersistPort(int port)
+    {
+        try
+        {
+            Microsoft.Maui.Storage.Preferences.Default.Set(StickyPortPreferenceKey, port);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "HttpListenerService: Could not persist assigned port {port}", port);
+        }
     }
 
     public Task StartAsync()

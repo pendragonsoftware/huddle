@@ -113,7 +113,9 @@ public sealed class JobQueueHandler : IQueueHandler
 
 ## HTTP API
 
-Use `.AddHttpApi()` to expose local endpoints from the MAUI app. The server advertises the configured port during discovery so clients can point their typed `HttpClient` instances at it.
+Use `.AddHttpApi()` to expose local endpoints from the MAUI app. The server advertises the actual port during discovery so clients can point their typed `HttpClient` instances at it.
+
+`.WithPort(...)` is a preference, not a guarantee: if the requested port is unavailable the server falls back to an automatically assigned one (clients still find it through discovery). Omitting `.WithPort(...)` picks a free port on first launch and reuses it on later launches, keeping Windows URL ACL reservations and firewall rules stable. Use `.WithPort(...)` when the port must be known in advance, e.g. for firewall allow-listing.
 
 ```csharp
 using Huddle.Server.Models;
