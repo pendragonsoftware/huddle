@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.9.1</VersionPrefix>
+    <VersionPrefix>0.9.2</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Fix Windows client discovery failing to restart after the DeviceWatcher completes its initial enumeration.</PackageReleaseNotes>
+    <PackageReleaseNotes>Server: reserve the Windows URL ACL for explicitly configured HTTP ports (previously only auto-assigned ports), and fall back to an automatically assigned port when the requested one is unavailable.</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

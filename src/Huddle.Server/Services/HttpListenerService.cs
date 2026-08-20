@@ -34,24 +34,19 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             logger.LogError("HttpListener not supported");
         }
 
-        var assignedPort = 0;
-        if (port > 0)
+        var assignedPort = port > 0 ? port : GetFreePort();
+
+        if (!TryPreparePort(assignedPort))
         {
-            assignedPort = port;
-        }
-        else
-        {
-            assignedPort = GetFreePort();
-            EnsurePermissionForPort(assignedPort);
+            var fallbackPort = GetFreePort();
+            logger.LogWarning("HttpListenerService: Port {requestedPort} is unavailable - using automatically assigned port {fallbackPort} instead", assignedPort, fallbackPort);
+            assignedPort = fallbackPort;
+            TryPreparePort(assignedPort);
         }
 
         _listener = new HttpListener();
         _listener.Prefixes.Clear();
-#if WINDOWS
-        _listener.Prefixes.Add($"http://+:{assignedPort}/");
-#else
-        _listener.Prefixes.Add($"http://{IpAddress}:{assignedPort}/");
-#endif
+        _listener.Prefixes.Add(GetPrefix(assignedPort));
 
         return assignedPort;
     }
@@ -137,11 +132,66 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
         return new ResponseInformation(HttpStatusCode.NotFound, string.Empty, string.Empty);
     }
 
+    private string GetPrefix(int port)
+    {
+#if WINDOWS
+        return $"http://+:{port}/";
+#else
+        return $"http://{IpAddress}:{port}/";
+#endif
+    }
+
+    /// <summary>
+    /// Confirms the port can actually be listened on, requesting a URL ACL reservation
+    /// (one-time UAC prompt on Windows) if listening is denied. Returns false if the
+    /// port is unavailable, e.g. already in use by another application.
+    /// </summary>
+    private bool TryPreparePort(int port)
+    {
+        if (ProbePort(port, out var accessDenied))
+        {
+            return true;
+        }
+
+        if (accessDenied)
+        {
+            EnsurePermissionForPort(port);
+            return ProbePort(port, out _);
+        }
+
+        return false;
+    }
+
+    private bool ProbePort(int port, out bool accessDenied)
+    {
+        accessDenied = false;
+        try
+        {
+            var probe = new HttpListener();
+            probe.Prefixes.Add(GetPrefix(port));
+            probe.Start();
+            probe.Stop();
+            return true;
+        }
+        catch (HttpListenerException ex) when (ex.ErrorCode == 5)
+        {
+            // ERROR_ACCESS_DENIED - no URL ACL reservation for this prefix.
+            accessDenied = true;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "HttpListenerService: Could not listen on port {port}", port);
+            return false;
+        }
+    }
+
     private int GetFreePort()
     {
-        var udpClient = new UdpClient(0, AddressFamily.InterNetwork);
-        var assignedPort = ((IPEndPoint)udpClient.Client.LocalEndPoint!).Port;
-        udpClient.Dispose();
+        var tcpListener = new TcpListener(System.Net.IPAddress.Any, 0);
+        tcpListener.Start();
+        var assignedPort = ((IPEndPoint)tcpListener.LocalEndpoint).Port;
+        tcpListener.Stop();
         return assignedPort;
     }
 
@@ -157,9 +207,10 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
         startInfo.Verb = "runas";
         startInfo.CreateNoWindow = true;
         process.StartInfo = startInfo;
-        var result = process.Start();
+        process.Start();
+        process.WaitForExit(30_000);
 
-        // This seems to be required to allow time for the netsh command to propegate and not cause http listener access is denied 
+        // This seems to be required to allow time for the netsh command to propegate and not cause http listener access is denied
         Thread.Sleep(1000);
 #endif
     }
