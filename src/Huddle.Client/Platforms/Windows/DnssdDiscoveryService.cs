@@ -12,9 +12,12 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
 
     private DeviceWatcher? _watcher;
     private bool _stopWhenFound = false;
+    private bool _startWhenStopped = false;
     private List<string?> _found = [];
 
-    public bool IsSearching => _watcher?.Status == DeviceWatcherStatus.Started;
+    // A DeviceWatcher keeps raising Added/Updated/Removed after its initial enumeration
+    // completes, so EnumerationCompleted still counts as actively searching.
+    public bool IsSearching => _watcher?.Status is DeviceWatcherStatus.Started or DeviceWatcherStatus.EnumerationCompleted;
 
     public event EventHandler<ServiceInformation>? ServiceDiscovered;
     public event EventHandler? SearchFailed;
@@ -22,9 +25,10 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
 
     public void Dispose()
     {
-        if (_watcher != null && _watcher.Status != DeviceWatcherStatus.Stopped)
+        _startWhenStopped = false;
+        if (IsSearching)
         {
-            _watcher.Stop();
+            _watcher?.Stop();
         }
     }
 
@@ -66,9 +70,10 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
 
     public void StopSearching()
     {
-        if (_watcher?.Status == DeviceWatcherStatus.Started)
+        _startWhenStopped = false;
+        if (IsSearching)
         {
-            _watcher.Stop();
+            _watcher?.Stop();
         }
     }
 
@@ -84,6 +89,7 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
             _watcher.Added += (s, a) => OnAddedDnssdService(a, _serviceType);
             _watcher.Updated += (s, a) => OnUpdatedDnssdService(a, _serviceType);
             _watcher.Removed += OnRemovedDnssdServiceAsync;
+            _watcher.Stopped += OnWatcherStopped;
         }
 
         return _watcher;
@@ -93,12 +99,34 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
     {
         try
         {
-            watcher.Start();
+            switch (watcher.Status)
+            {
+                case DeviceWatcherStatus.Started:
+                case DeviceWatcherStatus.EnumerationCompleted:
+                    // Already watching the network; services keep raising Added/Updated.
+                    return;
+                case DeviceWatcherStatus.Stopping:
+                    // A DeviceWatcher cannot start while stopping - restart from the Stopped event.
+                    _startWhenStopped = true;
+                    return;
+                default:
+                    watcher.Start();
+                    return;
+            }
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "DnssdDiscoveryService: Failed to start searching");
             SearchFailed?.Invoke(this, EventArgs.Empty);
+        }
+    }
+
+    private void OnWatcherStopped(DeviceWatcher sender, object args)
+    {
+        if (_startWhenStopped)
+        {
+            _startWhenStopped = false;
+            StartWatcher(sender);
         }
     }
 
@@ -167,7 +195,7 @@ internal partial class DnssdDiscoveryService : IDiscoveryService, IDisposable
 
         if (_stopWhenFound)
         {
-            _watcher?.Stop();
+            StopSearching();
         }
     }
 }
