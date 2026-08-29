@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.9.3</VersionPrefix>
+    <VersionPrefix>0.9.4</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Server: auto-assigned HTTP ports are now sticky across launches, keeping Windows URL ACL reservations and firewall rules stable.</PackageReleaseNotes>
+    <PackageReleaseNotes>Server: RequestContext.SourceHost now reports the connecting client's IP address (it previously echoed the request's Host header, i.e. the server's own address).</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

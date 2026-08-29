@@ -265,7 +265,9 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             var requestMessage = ReadStreamAsString(request.InputStream, request.ContentEncoding);
             var dictionaryQueryString = ToDictionary(request.QueryString);
             var dictionaryHeaders = ToDictionary(request.Headers);
-            var soureceIpAddress = request.UserHostName;
+            // RemoteEndPoint, not UserHostName: the latter is the request's Host header - the
+            // server's own address - which mislabelled every caller as the server itself.
+            var sourceIpAddress = request.RemoteEndPoint?.Address?.ToString() ?? string.Empty;
 
             string? rawUrlMinusQueryParams = null;
             if (request.RawUrl != null)
@@ -280,7 +282,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                     rawUrlMinusQueryParams,
                     request.HttpMethod,
                     requestMessage,
-                    soureceIpAddress,
+                    sourceIpAddress,
                     dictionaryQueryString,
                     dictionaryHeaders);
                     response.StatusCode = (int)statusCode;
