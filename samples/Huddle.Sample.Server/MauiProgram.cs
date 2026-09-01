@@ -60,6 +60,32 @@ public static class MauiProgram
 
                     return Task.FromResult(Results.Ok($"Received message {message} from {context.SourceHost}"));
                 })
+                .MapPost("/upload", new HttpEndpointOptions { BodyMode = HttpBodyMode.Streamed, MaxBodyBytes = 4L * 1024 * 1024 * 1024 }, async context =>
+                {
+                    var fileName = Path.GetFileName(context.Request.QueryString.GetValueOrDefault("fileName", "upload.bin"));
+                    var targetPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+                    var file = File.Create(targetPath);
+                    try
+                    {
+                        // The body streams straight to disk - memory use stays at O(buffer)
+                        // no matter how large the upload is.
+                        await context.Request.BodyStream!.CopyToAsync(file, context.Aborted);
+                    }
+                    catch (RequestAbortedException)
+                    {
+                        // The client disconnected mid-upload - remove the half-written file.
+                        await file.DisposeAsync();
+                        File.Delete(targetPath);
+                        throw;
+                    }
+                    await file.DisposeAsync();
+
+                    var messageBus = context.ServiceProvider.GetRequiredService<MessageBus>();
+                    messageBus.PostApiMessage($"Received {fileName} ({context.Request.ContentLength?.ToString() ?? "unknown length"} bytes) from {context.SourceHost}");
+
+                    return Results.Ok($"Saved {fileName}");
+                })
                 .MapPost("/loadtest/start", context =>
                 {
                     var amountExpected = context.Request.QueryString["amountExpected"];

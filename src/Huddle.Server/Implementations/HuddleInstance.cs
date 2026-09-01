@@ -41,7 +41,7 @@ public class HuddleInstance : IMobileServer
         int? httpPort,
         int? queuePort,
         bool dlq,
-        List<(string Path, string HttpMethod, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints,
+        List<(string Path, string HttpMethod, HttpEndpointOptions Options, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints,
         Dictionary<string, Type> handlers)
     {
         _broadcastService = broadcastService;

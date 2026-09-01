@@ -16,7 +16,7 @@ public class HuddleHttpApi : IHttpApi
         HuddleInstance server,
         INetworkListenerService tcpListenerService,
         int port,
-        List<(string Path, string HttpMethod, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints)
+        List<(string Path, string HttpMethod, HttpEndpointOptions Options, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints)
     {
         _server = server;
         _networkListenerService = tcpListenerService;
@@ -34,7 +34,7 @@ public class HuddleHttpApi : IHttpApi
         await _networkListenerService.StopAsync();
     }
 
-    private int Setup(int port, List<(string Path, string HttpMethod, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints)
+    private int Setup(int port, List<(string Path, string HttpMethod, HttpEndpointOptions Options, Func<RequestContext, Task<ResponseInformation>> Handler)> endpoints)
     {
         if (IpAddress == null)
         {
@@ -45,7 +45,7 @@ public class HuddleHttpApi : IHttpApi
 
         foreach (var endpoint in endpoints)
         {
-            _networkListenerService.MapEndpoint(endpoint.Path, endpoint.HttpMethod, endpoint.Handler);
+            _networkListenerService.MapEndpoint(endpoint.Path, endpoint.HttpMethod, endpoint.Options, endpoint.Handler);
         }
 
         return assignedPort;

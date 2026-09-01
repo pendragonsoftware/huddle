@@ -10,6 +10,10 @@
   <!-- Not published standalone: bundled into Huddle.Server / Huddle.Client / Huddle.PeerToPeer via IncludeProjectReferenceOutputsInPackage. -->
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
     <InternalsVisibleTo Include="Huddle.Server" />
     <InternalsVisibleTo Include="Huddle.Client" />
     <InternalsVisibleTo Include="Huddle.PeerToPeer" />

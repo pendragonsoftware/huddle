@@ -1,10 +1,9 @@
+using Huddle.Core.Http;
 using Huddle.Server.Models;
 using Huddle.Server.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-using System.Collections.Specialized;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
 
 namespace Huddle.Server.Services;
 
@@ -12,10 +11,10 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
 {
     private const string StickyPortPreferenceKey = "Huddle.Server.Http.StickyPort";
 
-    private readonly List<Client> _clients = [];
-    private readonly Dictionary<(string Path, string HttpMethod), Func<RequestContext, Task<ResponseInformation>>> _endpoints = [];
+    private readonly HttpRequestProcessor _processor = new(logger);
 
     private HttpListener? _listener;
+    private CancellationTokenSource _stoppingCts = new();
     private bool _cancelled = false;
 
     public bool IsListening => _listener?.IsListening ?? false;
@@ -24,6 +23,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
 
     public void Dispose()
     {
+        _stoppingCts.Cancel();
         _listener?.Close();
     }
 
@@ -102,6 +102,10 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
         logger.LogInformation("Started listening...");
 
         _cancelled = false;
+        if (_stoppingCts.IsCancellationRequested)
+        {
+            _stoppingCts = new CancellationTokenSource();
+        }
         WaitForMessages(_listener);
 
         return Task.CompletedTask;
@@ -110,6 +114,8 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
     public Task StopAsync()
     {
         _cancelled = true;
+        // Fires RequestContext.Aborted in any in-flight handlers.
+        _stoppingCts.Cancel();
         try
         {
             _listener?.Stop();
@@ -120,9 +126,28 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
         return Task.CompletedTask;
     }
 
-    public void MapEndpoint(string path, string httpMethod, Func<RequestContext, Task<ResponseInformation>> action)
+    public void MapEndpoint(string path, string httpMethod, HttpEndpointOptions options, Func<RequestContext, Task<ResponseInformation>> action)
     {
-        _endpoints.Add((path, httpMethod), action);
+        _processor.Map(path, httpMethod, new HttpEndpointRegistration(
+            options.BodyMode == HttpBodyMode.Streamed,
+            options.MaxBodyBytes,
+            async requestData =>
+            {
+                var context = new RequestContext(
+                    serviceProvider,
+                    requestData.SourceHost,
+                    new RequestInformation(requestData.Body, requestData.QueryString, requestData.Headers)
+                    {
+                        BodyStream = requestData.BodyStream,
+                        ContentLength = requestData.ContentLength
+                    })
+                {
+                    Aborted = requestData.Aborted
+                };
+
+                var (statusCode, responseText, responseContentType) = await action(context);
+                return new HttpResponseData((int)statusCode, responseText, responseContentType);
+            }));
     }
 
     private async void WaitForMessages(HttpListener listener)
@@ -135,24 +160,11 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                 var context = await listener.GetContextAsync();
                 logger.LogInformation("Recieved client context...");
 
-                var client = new Client(context, logger, HandleMessage);
-                lock (_clients)
-                {
-                    _clients.Add(client);
-                }
-
-                // Task.Run, not a direct call: RunAsync's synchronous prefix would otherwise
+                // Task.Run, not a direct call: ProcessAsync's synchronous prefix would otherwise
                 // run here - on whatever context started listening (the UI thread in a MAUI
                 // host) - and block the next accept until it first awaits. Concurrent requests
                 // must not queue behind each other's transfer.
-                var clientTask = Task.Run(client.RunAsync);
-                _ = clientTask.ContinueWith(_ =>
-                {
-                    lock (_clients)
-                    {
-                        _clients.Remove(client);
-                    }
-                });
+                _ = Task.Run(() => _processor.ProcessAsync(context, _stoppingCts.Token));
             }
             catch (Exception ex)
             {
@@ -163,24 +175,6 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                 }
             }
         }
-    }
-
-    private async Task<ResponseInformation> HandleMessage(
-        string? path,
-        string httpMethod,
-        string? body,
-        string sourceHost,
-        Dictionary<string, string> queryString,
-        Dictionary<string, string> headers)
-    {
-        logger.LogInformation("Message handled {httpMethod}:{path} with {body} from {sourceHost}. {@queryString}, {@headers}", path, httpMethod, body, sourceHost, queryString, headers);
-
-        if (_endpoints.TryGetValue((path ?? "/", httpMethod), out var action))
-        {
-            return await action(new RequestContext(serviceProvider, sourceHost, new RequestInformation(body, queryString, headers)));
-        }
-
-        return new ResponseInformation(HttpStatusCode.NotFound, string.Empty, string.Empty);
     }
 
     private string GetPrefix(int port)
@@ -264,92 +258,5 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
         // This seems to be required to allow time for the netsh command to propegate and not cause http listener access is denied
         Thread.Sleep(1000);
 #endif
-    }
-
-    private class Client(
-            HttpListenerContext context,
-            ILogger logger,
-            Func<string?, string, string?, string, Dictionary<string, string>, Dictionary<string, string>, Task<ResponseInformation>> messageRecieved)
-    {
-        public async Task RunAsync()
-        {
-            var request = context.Request;
-            var response = context.Response;
-
-            var requestMessage = await ReadStreamAsStringAsync(request.InputStream, request.ContentEncoding);
-            var dictionaryQueryString = ToDictionary(request.QueryString);
-            var dictionaryHeaders = ToDictionary(request.Headers);
-            // RemoteEndPoint, not UserHostName: the latter is the request's Host header - the
-            // server's own address - which mislabelled every caller as the server itself.
-            var sourceIpAddress = request.RemoteEndPoint?.Address?.ToString() ?? string.Empty;
-
-            string? rawUrlMinusQueryParams = null;
-            if (request.RawUrl != null)
-            {
-                var rawUrlSplit = request.RawUrl.Split("?");
-                rawUrlMinusQueryParams = rawUrlSplit[0];
-            }
-
-            try
-            {
-                var (statusCode, responseText, responseContentType) = await messageRecieved(
-                    rawUrlMinusQueryParams,
-                    request.HttpMethod,
-                    requestMessage,
-                    sourceIpAddress,
-                    dictionaryQueryString,
-                    dictionaryHeaders);
-                response.StatusCode = (int)statusCode;
-
-                if (!string.IsNullOrEmpty(responseText))
-                {
-                    var buffer = Encoding.UTF8.GetBytes(responseText);
-                    response.ContentLength64 = buffer.Length;
-                    response.ContentType = responseContentType;
-
-                    await response.OutputStream.WriteAsync(buffer);
-                }
-            }
-            catch (Exception ex)
-            {
-                var buffer = Encoding.UTF8.GetBytes(ex.Message);
-                response.ContentLength64 = buffer.Length;
-                response.ContentType = "text/plain";
-
-                await response.OutputStream.WriteAsync(buffer);
-
-                logger.LogError(ex, "Error performing {@request}", request);
-            }
-
-            response.OutputStream.Close();
-        }
-
-        private async Task<string?> ReadStreamAsStringAsync(Stream stream, Encoding contentEncoding)
-        {
-            try
-            {
-                using var body = stream;
-                using var reader = new StreamReader(body, contentEncoding);
-                return await reader.ReadToEndAsync();
-            }
-            catch (Exception ex)
-            {
-                logger.LogInformation(ex, "Error reading input stream for request");
-                return null;
-            }
-        }
-
-        private static Dictionary<string, string> ToDictionary(NameValueCollection nameValueCollection)
-        {
-            var dictionary = new Dictionary<string, string>();
-            foreach (var key in nameValueCollection.AllKeys)
-            {
-                if (key != null)
-                {
-                    dictionary.Add(key, nameValueCollection[key] ?? string.Empty);
-                }
-            }
-            return dictionary;
-        }
     }
 }

@@ -14,5 +14,5 @@ internal interface INetworkListenerService
 
     Task StopAsync();
 
-    void MapEndpoint(string path, string httpMethod, Func<RequestContext, Task<ResponseInformation>> action);
+    void MapEndpoint(string path, string httpMethod, HttpEndpointOptions options, Func<RequestContext, Task<ResponseInformation>> action);
 }

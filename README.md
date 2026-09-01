@@ -40,7 +40,7 @@ dotnet nuget add source --username <your-github-username> --password <a-github-P
 ## Features
 
 - Local service discovery for Android, iOS, Mac Catalyst, and Windows
-- A small HTTP API host for MAUI apps
+- A small HTTP API host for MAUI apps, with optional streamed request bodies for large binary uploads
 - UDP-based queue messaging with optional dead-letter queue support
 - Server-to-client messaging after a client connects
 - Peer-to-peer discovery and messaging by display name

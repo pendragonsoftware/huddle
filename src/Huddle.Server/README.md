@@ -137,6 +137,59 @@ builder.Services.AddHuddle("huddle")
     .Build();
 ```
 
+## Streaming Request Bodies (Large Uploads)
+
+By default a route's body is read into `context.Request.Body` as a string. For large binary payloads (photos, videos, multi-GB files) map the route with `HttpBodyMode.Streamed` instead: the handler gets the raw bytes as `context.Request.BodyStream` with no buffering anywhere in the pipeline - memory use is O(buffer) regardless of payload size, so clients can send raw bytes instead of a base64 JSON envelope.
+
+```csharp
+using Huddle.Server.Models;
+using System.Security.Cryptography;
+
+builder.Services.AddHuddle("huddle")
+    .AddHttpApi()
+        .MapPost("/upload", new HttpEndpointOptions { BodyMode = HttpBodyMode.Streamed, MaxBodyBytes = 4L * 1024 * 1024 * 1024 }, async context =>
+        {
+            // Upload metadata travels in the query string and headers.
+            var fileName = Path.GetFileName(context.Request.QueryString["fileName"]);
+            var targetPath = Path.Combine(FileSystem.CacheDirectory, fileName);
+
+            using var sha256 = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            var file = File.Create(targetPath);
+            try
+            {
+                // Stream straight to disk, hashing incrementally as bytes arrive.
+                var buffer = new byte[81920];
+                int read;
+                while ((read = await context.Request.BodyStream!.ReadAsync(buffer)) > 0)
+                {
+                    sha256.AppendData(buffer, 0, read);
+                    await file.WriteAsync(buffer.AsMemory(0, read));
+                }
+            }
+            catch (RequestAbortedException)
+            {
+                // The client disconnected mid-upload - clean up the half-written file.
+                await file.DisposeAsync();
+                File.Delete(targetPath);
+                throw;
+            }
+            await file.DisposeAsync();
+
+            return Results.Ok(Convert.ToHexString(sha256.GetHashAndReset()));
+        })
+        .Server
+    .Build();
+```
+
+Behaviour of `BodyStream`:
+
+- Read-once and forward-only; on streamed routes `context.Request.Body` is `null`.
+- Both `Content-Length` and chunked bodies are supported. `context.Request.ContentLength` reports the declared length, or `null` when the body is chunked.
+- A read returns `0` when the body has ended cleanly. If the client disconnects mid-upload the read throws `RequestAbortedException` instead, so "body ended" and "client aborted" are always distinguishable.
+- `context.Aborted` is a `CancellationToken` that fires when the server is stopping - pass it to long-running work such as `CopyToAsync`.
+
+Body size limits are opt-in, per route via `HttpEndpointOptions.MaxBodyBytes` or server-wide via `.WithMaxRequestBodyBytes(...)` (a route's own value wins). Requests declaring a larger `Content-Length` are rejected with `413 Payload Too Large` before the handler runs; chunked bodies are cut off with a 413 as soon as they cross the limit. Limits also apply to string-body routes.
+
 ## Inspect The Running Server
 
 Inject `IMobileServer`, `IHttpApi`, or `IQueue` if you want to inspect or control the running server.
