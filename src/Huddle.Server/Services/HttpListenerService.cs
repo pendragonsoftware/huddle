@@ -136,9 +136,23 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                 logger.LogInformation("Recieved client context...");
 
                 var client = new Client(context, logger, HandleMessage);
-                _clients.Add(client);
-                var clientTask = client.RunAsync();
-                _ = clientTask.ContinueWith(_ => _clients.Remove(client));
+                lock (_clients)
+                {
+                    _clients.Add(client);
+                }
+
+                // Task.Run, not a direct call: RunAsync's synchronous prefix would otherwise
+                // run here - on whatever context started listening (the UI thread in a MAUI
+                // host) - and block the next accept until it first awaits. Concurrent requests
+                // must not queue behind each other's transfer.
+                var clientTask = Task.Run(client.RunAsync);
+                _ = clientTask.ContinueWith(_ =>
+                {
+                    lock (_clients)
+                    {
+                        _clients.Remove(client);
+                    }
+                });
             }
             catch (Exception ex)
             {
@@ -262,7 +276,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             var request = context.Request;
             var response = context.Response;
 
-            var requestMessage = ReadStreamAsString(request.InputStream, request.ContentEncoding);
+            var requestMessage = await ReadStreamAsStringAsync(request.InputStream, request.ContentEncoding);
             var dictionaryQueryString = ToDictionary(request.QueryString);
             var dictionaryHeaders = ToDictionary(request.Headers);
             // RemoteEndPoint, not UserHostName: the latter is the request's Host header - the
@@ -285,7 +299,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                     sourceIpAddress,
                     dictionaryQueryString,
                     dictionaryHeaders);
-                    response.StatusCode = (int)statusCode;
+                response.StatusCode = (int)statusCode;
 
                 if (!string.IsNullOrEmpty(responseText))
                 {
@@ -293,7 +307,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                     response.ContentLength64 = buffer.Length;
                     response.ContentType = responseContentType;
 
-                    response.OutputStream.Write(buffer, 0, buffer.Length);
+                    await response.OutputStream.WriteAsync(buffer);
                 }
             }
             catch (Exception ex)
@@ -302,7 +316,7 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                 response.ContentLength64 = buffer.Length;
                 response.ContentType = "text/plain";
 
-                response.OutputStream.Write(buffer, 0, buffer.Length);
+                await response.OutputStream.WriteAsync(buffer);
 
                 logger.LogError(ex, "Error performing {@request}", request);
             }
@@ -310,16 +324,13 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
             response.OutputStream.Close();
         }
 
-        private string? ReadStreamAsString(Stream stream, Encoding contentEncoding)
+        private async Task<string?> ReadStreamAsStringAsync(Stream stream, Encoding contentEncoding)
         {
-            string? requestMessage;
             try
             {
                 using var body = stream;
-                using (var reader = new StreamReader(body, contentEncoding))
-                
-                requestMessage = reader.ReadToEnd();
-                return requestMessage;
+                using var reader = new StreamReader(body, contentEncoding);
+                return await reader.ReadToEndAsync();
             }
             catch (Exception ex)
             {
