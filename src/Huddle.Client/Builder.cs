@@ -27,6 +27,7 @@ public interface IHuddleBuilder
 public class Builder(IServiceCollection services, string serviceName) : IHuddleBuilder
 {
     private bool _withMessaging = false;
+    private bool _withQueueClients = false;
 
     public IHuddleBuilder WithMessaging(bool withMessaging)
     {
@@ -51,6 +52,7 @@ public class Builder(IServiceCollection services, string serviceName) : IHuddleB
 
     public IHuddleBuilder AddQueueClient<T>(bool updateQueueClientsOnDiscovery = true) where T : class
     {
+        _withQueueClients = true;
         services.AddTransient<QueueClient>();
         services.AddTransient<T>(sp =>
         {
@@ -71,12 +73,13 @@ public class Builder(IServiceCollection services, string serviceName) : IHuddleB
     {
         _ = serviceName;
 
-        services.AddHuddleCore(_withMessaging);
+        // Queue clients send over the same UDP transport as messaging, so they need it registered too.
+        services.AddHuddleCore(_withMessaging || _withQueueClients);
 
         services.AddSingleton<IServerDiscoveryService>(sp => new ServerDiscoveryService(
             _withMessaging,
             sp.GetRequiredService<IDiscoveryService>(),
-            sp.GetRequiredService<IMessagingService>(),
+            sp.GetService<IMessagingService>(),
             sp.GetRequiredService<IIpAddressRetrievalService>(),
             sp.GetRequiredService<IDeviceInfoProvider>(),
             sp.GetRequiredService<ILogger<ServerDiscoveryService>>()));

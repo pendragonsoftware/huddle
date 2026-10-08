@@ -9,7 +9,8 @@ namespace Huddle.Client.Services
     internal class ServerDiscoveryService : IServerDiscoveryService
     {
         private readonly IDiscoveryService _discoveryService;
-        private readonly IMessagingService _messagingService;
+        // Null unless the client was built WithMessaging (or with a queue client, which also needs UDP).
+        private readonly IMessagingService? _messagingService;
         private readonly IIpAddressRetrievalService _ipAddressRetrievalService;
         private readonly IDeviceInfoProvider _deviceIdProvider;
         private readonly ILogger _logger;
@@ -33,7 +34,7 @@ namespace Huddle.Client.Services
         public ServerDiscoveryService(
            bool withMessaging,
            IDiscoveryService discoveryService,
-           IMessagingService messagingService,
+           IMessagingService? messagingService,
            IIpAddressRetrievalService ipAddressService,
            IDeviceInfoProvider deviceIdProvider,
            ILogger<ServerDiscoveryService> logger)
@@ -49,7 +50,15 @@ namespace Huddle.Client.Services
             _discoveryService.SearchFailed += DiscoveryService_SearchFailed;
             _discoveryService.ServiceLost += DiscoveryService_ServiceLost;
 
-            _messagingService.MessageReceived += MessagingService_MessageReceived;
+            if (_withMessaging && _messagingService == null)
+            {
+                throw new ArgumentNullException(nameof(messagingService), "Messaging is enabled but no IMessagingService was provided");
+            }
+
+            if (_messagingService != null)
+            {
+                _messagingService.MessageReceived += MessagingService_MessageReceived;
+            }
         }
 
         public void Dispose()
@@ -60,11 +69,14 @@ namespace Huddle.Client.Services
 
             _discoveryService.Dispose();
 
-            _messagingService.MessageReceived -= MessagingService_MessageReceived;
-
-            if (_messagingService.IsListening)
+            if (_messagingService != null)
             {
-                _messagingService.Dispose();
+                _messagingService.MessageReceived -= MessagingService_MessageReceived;
+
+                if (_messagingService.IsListening)
+                {
+                    _messagingService.Dispose();
+                }
             }
         }
 
@@ -104,7 +116,7 @@ namespace Huddle.Client.Services
 
         public async Task ConnectToServerAsync(ServerInformation serverInformation)
         {
-            if (_withMessaging)
+            if (_withMessaging && _messagingService != null)
             {
                 if (!serverInformation.MessagingPort.HasValue)
                 {
@@ -125,7 +137,10 @@ namespace Huddle.Client.Services
         {
             if (ConnectedServer != null)
             {
-                await _messagingService.StopListeningAsync();
+                if (_messagingService != null)
+                {
+                    await _messagingService.StopListeningAsync();
+                }
 
                 ConnectedServer.Dispose();
                 ConnectedServer = null;
@@ -164,7 +179,7 @@ namespace Huddle.Client.Services
         private void DiscoveryService_ServiceLost(object? sender, string? e)
         {
             _logger.LogDebug("DiscoveryService: Server connection lost {instanceName}", e);
-            if (_messagingService.IsListening)
+            if (_messagingService?.IsListening == true)
             {
                 _messagingService.StopListeningAsync();
             }

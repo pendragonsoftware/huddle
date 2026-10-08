@@ -58,7 +58,8 @@ internal class ServerBuilder : IServerBuilder
 
     public IServiceCollection Build()
     {
-        _services.AddHuddleCore(_withMessaging);
+        // The queue listens over the same UDP transport as messaging, so it needs it registered too.
+        _services.AddHuddleCore(_withMessaging || _queueBuilder != null);
 
         if (_withMessaging)
         {

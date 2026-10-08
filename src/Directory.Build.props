@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.10.0</VersionPrefix>
+    <VersionPrefix>0.10.1</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Server: HTTP routes can now opt in to streaming request bodies for large binary uploads - MapPost/MapPut overloads taking HttpEndpointOptions (BodyMode = Streamed) expose the raw body as RequestContext.Request.BodyStream with no full-payload buffering, plus Request.ContentLength (null for chunked bodies), RequestContext.Aborted, RequestAbortedException on client disconnect, and optional per-route or server-wide (WithMaxRequestBodyBytes) body size limits that reject oversized requests with 413. Existing string-body routes are unchanged. Fix: an exception thrown by a route handler now produces a 500 response (previously the error text was returned with status 200).</PackageReleaseNotes>
+    <PackageReleaseNotes>Fix: a client built without WithMessaging(true) no longer fails with "No service for type 'Huddle.Core.Services.Interfaces.IMessagingService' has been registered" when IServerDiscoveryService is resolved. Fix: AddQueue (server) and AddQueueClient (client) now register the UDP transport they use, so they no longer also require messaging to be enabled.</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
