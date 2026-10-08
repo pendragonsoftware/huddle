@@ -37,12 +37,13 @@ internal class ClientConnection
 
     public async Task WaitUntilReady() => await _ready.Task;
 
+    // Called on every state change, so only the first one may complete _ready (see NWListenerConnectionService).
     private void Connection_StateChanged(NWConnectionState state, NWError? error)
     {
         if (error != null)
         {
             _logger.LogError("Client connection {ipAddress} - {errorCode}:{errorDescription}", _connection.Endpoint?.Address, error.ErrorCode, error);
-            _ready.SetResult(false);
+            _ready.TrySetResult(false);
         }
 
         _logger.LogDebug("Client connection {ipAddress} changed {state}", _connection.Endpoint?.Address, state);
@@ -51,13 +52,13 @@ internal class ClientConnection
         {
             _logger.LogError("Client connection {ipAddress} - failed", _connection.Endpoint?.Address);
             _connection.Cancel();
-            _ready.SetResult(false);
+            _ready.TrySetResult(false);
         }
 
         if (state == NWConnectionState.Ready)
         {
             _connection.ReceiveMessage(Connection_ReceiveMessage);
-            _ready.SetResult(true);
+            _ready.TrySetResult(true);
         }
     }
 

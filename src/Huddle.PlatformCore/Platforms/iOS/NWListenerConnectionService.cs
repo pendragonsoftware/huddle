@@ -115,12 +115,14 @@ namespace Huddle.Core.Platforms.iOS
             return true;
         }
 
+        // Called on every state change (e.g. Waiting with an error, then Ready or Failed), so only the first one may
+        // complete the task. A second SetResult would throw on the dispatch queue and terminate the app.
         private void Listener_StateChange(NWListenerState state, NWError? error)
         {
             if (error != null)
             {
                 logger.LogError("NWConnectionMessagingService: Listener {errorCode}:{errorDescription}", error.ErrorCode, error);
-                _taskCompletionSource.SetResult(false);
+                _taskCompletionSource.TrySetResult(false);
             }
 
             logger.LogDebug("NWConnectionMessagingService: Listener {state} changed", state);
@@ -129,14 +131,14 @@ namespace Huddle.Core.Platforms.iOS
             {
                 logger.LogError("NWConnectionMessagingService: Failed");
                 _listener?.Cancel();
-                _taskCompletionSource.SetResult(false);
+                _taskCompletionSource.TrySetResult(false);
             }
 
             if (state == NWListenerState.Ready)
             {
                 logger.LogDebug("NWConnectionMessagingService: Listener ready");
                 _isListening = true;
-                _taskCompletionSource.SetResult(true);
+                _taskCompletionSource.TrySetResult(true);
             }
         }
 

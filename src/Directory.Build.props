@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.10.1</VersionPrefix>
+    <VersionPrefix>0.10.2</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Fix: a client built without WithMessaging(true) no longer fails with "No service for type 'Huddle.Core.Services.Interfaces.IMessagingService' has been registered" when IServerDiscoveryService is resolved. Fix: AddQueue (server) and AddQueueClient (client) now register the UDP transport they use, so they no longer also require messaging to be enabled.</PackageReleaseNotes>
+    <PackageReleaseNotes>Fix (iOS): the app no longer crashes with "An attempt was made to transition a task to a final state when it had already completed" when a Network.framework listener or connection reports more than one state change, e.g. waiting for the local-network permission and then becoming ready, or reporting an error and then failing. This hit the server's Bonjour advertiser at startup.</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>
