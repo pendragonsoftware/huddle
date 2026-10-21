@@ -30,7 +30,22 @@ internal sealed record HttpRequestData(
     Dictionary<string, string> Headers,
     CancellationToken Aborted);
 
-internal sealed record HttpResponseData(int StatusCode, string Body, string ContentType);
+/// <param name="Body">The response body as text; ignored when <see cref="BodyStream"/> is set.</param>
+internal sealed record HttpResponseData(int StatusCode, string Body, string ContentType)
+{
+    /// <summary>
+    /// A body to copy to the client as it is read, for large binary responses (files, media),
+    /// instead of <see cref="Body"/>. The pipeline disposes it once the response is written,
+    /// including when the client disconnects part way through.
+    /// </summary>
+    public Stream? BodyStream { get; init; }
+
+    /// <summary>
+    /// The length to declare for <see cref="BodyStream"/>. When null, a seekable stream's
+    /// remaining length is used; otherwise the response is sent chunked.
+    /// </summary>
+    public long? ContentLength { get; init; }
+}
 
 /// <summary>
 /// The per-request HTTP pipeline shared by Huddle.Server: routes a request to its endpoint,
@@ -168,7 +183,7 @@ internal sealed class HttpRequestProcessor(ILogger logger)
             response.KeepAlive = false;
         }
 
-        await WriteResponseAsync(response, responseData);
+        await WriteResponseAsync(response, responseData, serverStopping);
     }
 
     private async Task<string?> ReadBodyAsStringAsync(HttpListenerRequest request, long? contentLength, long? maxBodyBytes)
@@ -192,8 +207,14 @@ internal sealed class HttpRequestProcessor(ILogger logger)
         }
     }
 
-    private async Task WriteResponseAsync(HttpListenerResponse response, HttpResponseData responseData)
+    private async Task WriteResponseAsync(HttpListenerResponse response, HttpResponseData responseData, CancellationToken serverStopping = default)
     {
+        if (responseData.BodyStream is { } bodyStream)
+        {
+            await WriteStreamedResponseAsync(response, responseData, bodyStream, serverStopping);
+            return;
+        }
+
         try
         {
             response.StatusCode = responseData.StatusCode;
@@ -219,6 +240,47 @@ internal sealed class HttpRequestProcessor(ILogger logger)
             catch
             {
             }
+        }
+    }
+
+    /// <summary>
+    /// Copies a streamed body to the client in fixed-size pieces, so memory use stays O(buffer)
+    /// whatever the size. A client that disconnects mid-download just ends the copy.
+    /// </summary>
+    private async Task WriteStreamedResponseAsync(HttpListenerResponse response, HttpResponseData responseData, Stream bodyStream, CancellationToken serverStopping)
+    {
+        try
+        {
+            response.StatusCode = responseData.StatusCode;
+            response.ContentType = string.IsNullOrEmpty(responseData.ContentType) ? "application/octet-stream" : responseData.ContentType;
+
+            var length = responseData.ContentLength ?? (bodyStream.CanSeek ? bodyStream.Length - bodyStream.Position : null);
+            if (length.HasValue)
+            {
+                response.ContentLength64 = length.Value;
+            }
+            else
+            {
+                response.SendChunked = true;
+            }
+
+            await bodyStream.CopyToAsync(response.OutputStream, 81920, serverStopping);
+            response.OutputStream.Close();
+        }
+        catch (Exception ex)
+        {
+            logger.LogInformation(ex, "Could not finish a streamed response - the client likely disconnected");
+            try
+            {
+                response.Abort();
+            }
+            catch
+            {
+            }
+        }
+        finally
+        {
+            await bodyStream.DisposeAsync();
         }
     }
 

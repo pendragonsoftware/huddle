@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.10.2</VersionPrefix>
+    <VersionPrefix>0.11.1</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>Fix (iOS): the app no longer crashes with "An attempt was made to transition a task to a final state when it had already completed" when a Network.framework listener or connection reports more than one state change, e.g. waiting for the local-network permission and then becoming ready, or reporting an error and then failing. This hit the server's Bonjour advertiser at startup.</PackageReleaseNotes>
+    <PackageReleaseNotes>HTTP API handlers can stream response bodies (Results.Stream, Results.File): large files go to the client as they are read, with O(buffer) memory, instead of being returned as a string. Seekable streams declare a Content-Length; others are sent chunked. The stream is disposed once the response is written or the client disconnects.</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

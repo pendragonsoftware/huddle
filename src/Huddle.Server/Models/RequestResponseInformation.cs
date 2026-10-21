@@ -37,4 +37,16 @@ public record RequestInformation(string? Body, Dictionary<string, string> QueryS
     public long? ContentLength { get; init; }
 }
 
-public record ResponseInformation(HttpStatusCode StatusCode, string Response, string ResponseContentType);
+public record ResponseInformation(HttpStatusCode StatusCode, string Response, string ResponseContentType)
+{
+    /// <summary>
+    /// A body copied to the client as it is read, instead of <see cref="Response"/>, for large
+    /// binary responses such as files. Huddle disposes it once the response has been written
+    /// (or the client has gone). Use <see cref="Results.Stream"/> or <see cref="Results.File"/>.
+    /// </summary>
+    public Stream? BodyStream { get; init; }
+
+    /// <summary>The length to declare for <see cref="BodyStream"/>; null uses a seekable stream's
+    /// remaining length, or sends the response chunked.</summary>
+    public long? ContentLength { get; init; }
+}

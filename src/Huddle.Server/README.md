@@ -190,6 +190,38 @@ Behaviour of `BodyStream`:
 
 Body size limits are opt-in, per route via `HttpEndpointOptions.MaxBodyBytes` or server-wide via `.WithMaxRequestBodyBytes(...)` (a route's own value wins). Requests declaring a larger `Content-Length` are rejected with `413 Payload Too Large` before the handler runs; chunked bodies are cut off with a 413 as soon as they cross the limit. Limits also apply to string-body routes.
 
+## Streaming Response Bodies (Large Downloads)
+
+Handlers normally return text or JSON. To send a file or other large binary payload, return `Results.File(...)` or `Results.Stream(...)` instead: Huddle copies the stream to the client as it reads it, so memory use stays O(buffer) whatever the size.
+
+```csharp
+using Huddle.Server.Models;
+
+builder.Services.AddHuddle("huddle")
+    .AddHttpApi()
+        .MapGet("/download", context =>
+        {
+            var fileName = Path.GetFileName(context.Request.QueryString["fileName"]);
+            var path = Path.Combine(FileSystem.AppDataDirectory, fileName);
+            if (!File.Exists(path))
+            {
+                return Task.FromResult(new ResponseInformation(HttpStatusCode.NotFound, string.Empty, string.Empty));
+            }
+
+            // Optional offset, so a client can resume a download it already has part of.
+            long.TryParse(context.Request.QueryString.GetValueOrDefault("offset"), out var offset);
+            return Task.FromResult(Results.File(path, "audio/wav", offset));
+        })
+        .Server
+    .Build();
+```
+
+Behaviour of streamed responses:
+
+- The body starts at the stream's current position. A seekable stream declares its remaining length as `Content-Length`; a non-seekable one is sent chunked, unless you pass `contentLength`.
+- Huddle disposes the stream once the response has been written, including when the client disconnects part way through.
+- On the client, read it with `HttpCompletionOption.ResponseHeadersRead` and `ReadAsStreamAsync()` so the client doesn't buffer it either.
+
 ## Inspect The Running Server
 
 Inject `IMobileServer`, `IHttpApi`, or `IQueue` if you want to inspect or control the running server.

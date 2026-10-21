@@ -145,8 +145,12 @@ internal partial class HttpListenerService(IServiceProvider serviceProvider, ILo
                     Aborted = requestData.Aborted
                 };
 
-                var (statusCode, responseText, responseContentType) = await action(context);
-                return new HttpResponseData((int)statusCode, responseText, responseContentType);
+                var response = await action(context);
+                return new HttpResponseData((int)response.StatusCode, response.Response, response.ResponseContentType)
+                {
+                    BodyStream = response.BodyStream,
+                    ContentLength = response.ContentLength
+                };
             }));
     }
 
