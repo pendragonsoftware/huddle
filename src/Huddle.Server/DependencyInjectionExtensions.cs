@@ -20,7 +20,7 @@ internal static class DependencyInjectionExtensions
     {
 #if IOS
         services.AddSingleton<IBroadcastService, NWBroadcastService>(sp => new NWBroadcastService(
-            broadcastPort ?? 0,
+            broadcastPort ?? DEFAULT_PORT,
             sp.GetRequiredService<ILogger<NWBroadcastService>>()));
 #elif ANDROID
         services.AddSingleton<IBroadcastService, NetworkDiscoveryBroadcastService>(sp => new NetworkDiscoveryBroadcastService(
