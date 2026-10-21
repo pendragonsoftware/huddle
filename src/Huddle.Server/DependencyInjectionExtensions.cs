@@ -20,7 +20,7 @@ internal static class DependencyInjectionExtensions
     {
 #if IOS
         services.AddSingleton<IBroadcastService, NWBroadcastService>(sp => new NWBroadcastService(
-            broadcastPort ?? DEFAULT_PORT,
+            broadcastPort ?? 0,
             sp.GetRequiredService<ILogger<NWBroadcastService>>()));
 #elif ANDROID
         services.AddSingleton<IBroadcastService, NetworkDiscoveryBroadcastService>(sp => new NetworkDiscoveryBroadcastService(
@@ -28,7 +28,7 @@ internal static class DependencyInjectionExtensions
             sp.GetRequiredService<ILogger<NetworkDiscoveryBroadcastService>>()));
 #elif WINDOWS
         services.AddSingleton<IBroadcastService, DnssdBroadcastService>(sp => new DnssdBroadcastService(
-            broadcastPort ?? DEFAULT_PORT,
+            broadcastPort ?? 0,
             sp.GetRequiredService<ILogger<DnssdBroadcastService>>()));
 #endif
     }
