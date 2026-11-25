@@ -1,3 +1,6 @@
+// Apple's Network framework, which iOS and Mac Catalyst share. Outside Platforms/ because MAUI compiles only the
+// current platform's folder there, and Platforms/iOS is not Mac Catalyst's.
+#if IOS || MACCATALYST
 using Huddle.Core.Platforms.iOS;
 using Huddle.Server.Services.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -67,3 +70,4 @@ internal class NWBroadcastService(int broadcastPort, ILogger<NWBroadcastService>
         }
     }*/
 }
+#endif

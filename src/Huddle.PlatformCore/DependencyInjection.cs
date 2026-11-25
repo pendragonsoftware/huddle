@@ -1,7 +1,7 @@
 using Huddle.Core.Services;
 using Huddle.Core.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
-#if IOS
+#if IOS || MACCATALYST
 using Huddle.Core.Platforms.iOS;
 #endif
 #if ANDROID
@@ -21,14 +21,14 @@ namespace Huddle.Core
 
             if (withMessaging)
             {
-#if IOS
+#if IOS || MACCATALYST
                 services.AddTransient<IMessagingService, NWConnectionMessagingService>();
 #else
                 services.AddTransient<IMessagingService, UdpMessagingService>();
 #endif
             }
 
-#if IOS
+#if IOS || MACCATALYST
             services.AddSingleton<IDeviceInfoProvider, DeviceIdProvider>();
 #elif ANDROID
             services.AddSingleton<IDeviceInfoProvider, DeviceIdProvider>();

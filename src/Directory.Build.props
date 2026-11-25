@@ -5,13 +5,13 @@
     <Product>Huddle</Product>
     <PackageIcon>icon.png</PackageIcon>
     <Copyright>Copyright 2026 Pendragon Development</Copyright>
-    <VersionPrefix>0.11.3</VersionPrefix>
+    <VersionPrefix>0.11.4</VersionPrefix>
     <PackageProjectUrl>https://github.com/davewheatcroft3/Huddle</PackageProjectUrl>
     <RepositoryUrl>https://github.com/davewheatcroft3/Huddle</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <PackageReleaseNotes>HTTP API handlers can stream response bodies (Results.Stream, Results.File): large files go to the client as they are read, with O(buffer) memory, instead of being returned as a string. Seekable streams declare a Content-Length; others are sent chunked. The stream is disposed once the response is written or the client disconnects.</PackageReleaseNotes>
+    <PackageReleaseNotes>Mac Catalyst: the server, client and peer-to-peer packages now register the same Network framework services as iOS (device id, Bonjour broadcast and browsing, NWConnection messaging). Before, a Mac Catalyst app had none, so building a server threw for want of IDeviceInfoProvider and IBroadcastService. The Apple code moved from Platforms/iOS to Apple/, which both platforms compile.</PackageReleaseNotes>
     <PackageTags>dotnet;maui;networking;local-network;service-discovery;peer-to-peer</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <NoWarn>$(NoWarn);1591</NoWarn>

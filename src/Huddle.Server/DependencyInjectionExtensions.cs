@@ -1,6 +1,6 @@
 using Huddle.Server.Services.Interfaces;
 using Microsoft.Extensions.Logging;
-#if IOS
+#if IOS || MACCATALYST
 using Huddle.Server.Platforms.iOS;
 #endif
 #if ANDROID
@@ -18,7 +18,7 @@ internal static class DependencyInjectionExtensions
 
     internal static void RegisterBroadcastService(this IServiceCollection services, int? broadcastPort)
     {
-#if IOS
+#if IOS || MACCATALYST
         services.AddSingleton<IBroadcastService, NWBroadcastService>(sp => new NWBroadcastService(
             broadcastPort ?? 0,
             sp.GetRequiredService<ILogger<NWBroadcastService>>()));

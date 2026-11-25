@@ -7,7 +7,7 @@ using Huddle.Server.Services.Interfaces;
 using Huddle.Client.Services;
 using Huddle.Server;
 
-#if IOS
+#if IOS || MACCATALYST
 using Huddle.Client.Platforms.iOS;
 using Huddle.Server.Platforms.iOS;
 #elif ANDROID
@@ -69,7 +69,7 @@ public class Builder(IServiceCollection services, string serviceName) : IHuddleP
             sp.GetRequiredService<IDeviceInfoProvider>(),
             sp.GetRequiredService<ILogger<ServerDiscoveryService>>()));
 
-#if IOS
+#if IOS || MACCATALYST
         ObjCRuntime.Class.ThrowOnInitFailure = false;
         services.AddSingleton<IDiscoveryService>(sp => new NWBrowserDiscoveryService(
             serviceName,

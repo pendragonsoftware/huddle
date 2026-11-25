@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 using Huddle.Core.Services.Interfaces;
 using Huddle.Core;
 using Huddle.Client.Services.Interfaces;
-#if IOS
+#if IOS || MACCATALYST
 using Huddle.Client.Platforms.iOS;
 #elif ANDROID
 using Huddle.Client.Platforms.Android;
@@ -86,7 +86,7 @@ public class Builder(IServiceCollection services, string serviceName) : IHuddleB
 
         services.AddSingleton<ServerClientSyncingService>();
 
-#if IOS
+#if IOS || MACCATALYST
         ObjCRuntime.Class.ThrowOnInitFailure = false;
         services.AddSingleton<IDiscoveryService>(sp => new NWBrowserDiscoveryService(
             serviceName,
